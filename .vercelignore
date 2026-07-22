@@ -1,0 +1,37 @@
+# Dependencies
+node_modules
+npm-debug.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Documentation (optional - keep if you want them deployed)
+# *.md
+
+# Database files (not needed in deployment)
+database/*.sql
+
+# Tests
+test
+tests
+*.test.js
+*.spec.js
+
+# Development only
+.editorconfig
+.eslintrc
+.prettierrc

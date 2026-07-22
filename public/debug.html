@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug CSS Loading</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .debug-container {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-box {
+            border: 2px solid #000;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .red { background: red; color: white; }
+        .green { background: green; color: white; }
+    </style>
+</head>
+<body>
+    <div class="debug-container">
+        <h1>🔍 Debug CSS Loading</h1>
+        
+        <div class="test-box red">
+            <h3>Test 1: Inline CSS</h3>
+            <p>✓ Jika Anda melihat kotak MERAH ini, inline CSS bekerja</p>
+        </div>
+        
+        <div class="test-box green">
+            <h3>Test 2: Embedded CSS</h3>
+            <p>✓ Jika Anda melihat kotak HIJAU ini, embedded CSS bekerja</p>
+        </div>
+        
+        <div class="header">
+            <h2>Test 3: External CSS (styles.css)</h2>
+            <p>✓ Jika kotak ini memiliki background gradien BIRU dan teks PUTIH, external CSS bekerja!</p>
+            <p>✗ Jika background putih dengan teks hitam, CSS TIDAK dimuat</p>
+        </div>
+        
+        <button class="btn btn-primary">
+            Test Button dari styles.css
+        </button>
+        
+        <hr>
+        
+        <h3>Debug Information:</h3>
+        <div id="debug-info"></div>
+        
+        <h3>Instruksi:</h3>
+        <ol>
+            <li>Buka DevTools (F12)</li>
+            <li>Buka tab <strong>Network</strong></li>
+            <li>Refresh halaman (Ctrl+R)</li>
+            <li>Cari file <code>styles.css</code> dalam list</li>
+            <li>Klik file tersebut dan screenshot:</li>
+            <ul>
+                <li>Status Code (harus 200)</li>
+                <li>Content-Type (harus text/css)</li>
+                <li>Preview (isi file CSS)</li>
+            </ul>
+        </ol>
+    </div>
+    
+    <script>
+        // Check if CSS loaded
+        const debugInfo = document.getElementById('debug-info');
+        const header = document.querySelector('.header');
+        const style = window.getComputedStyle(header);
+        
+        let info = `
+            <p><strong>URL:</strong> ${window.location.href}</p>
+            <p><strong>Timestamp:</strong> ${new Date().toLocaleString()}</p>
+            <p><strong>Header Background:</strong> ${style.backgroundColor}</p>
+            <p><strong>Header Color:</strong> ${style.color}</p>
+            <p><strong>CSS Loaded?:</strong> ${style.backgroundColor !== 'rgba(0, 0, 0, 0)' && style.backgroundColor !== 'transparent' ? '✓ YES' : '✗ NO'}</p>
+        `;
+        
+        debugInfo.innerHTML = info;
+        
+        // Test loading CSS directly
+        fetch('/styles.css')
+            .then(response => {
+                const statusInfo = document.createElement('p');
+                statusInfo.innerHTML = `<strong>Direct CSS Access:</strong> Status ${response.status} ${response.ok ? '✓' : '✗'}`;
+                debugInfo.appendChild(statusInfo);
+                
+                const contentType = response.headers.get('Content-Type');
+                const typeInfo = document.createElement('p');
+                typeInfo.innerHTML = `<strong>Content-Type:</strong> ${contentType}`;
+                debugInfo.appendChild(typeInfo);
+                
+                return response.text();
+            })
+            .then(cssText => {
+                const sizeInfo = document.createElement('p');
+                sizeInfo.innerHTML = `<strong>CSS Size:</strong> ${cssText.length} characters`;
+                debugInfo.appendChild(sizeInfo);
+                
+                const firstLines = cssText.split('\n').slice(0, 3).join('\n');
+                const previewInfo = document.createElement('pre');
+                previewInfo.textContent = 'CSS Preview:\n' + firstLines + '\n...';
+                previewInfo.style.background = '#f5f5f5';
+                previewInfo.style.padding = '10px';
+                debugInfo.appendChild(previewInfo);
+            })
+            .catch(err => {
+                const errorInfo = document.createElement('p');
+                errorInfo.innerHTML = `<strong style="color:red;">Error loading CSS:</strong> ${err.message}`;
+                debugInfo.appendChild(errorInfo);
+            });
+    </script>
+</body>
+</html>

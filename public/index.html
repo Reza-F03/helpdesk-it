@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helpdesk IT System</title>
+    <style>
+        /* Temporary inline styles for immediate display */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f1f5f9;
+        }
+        .container {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+    </style>
+    <script>
+        // Load CSS with cache busting
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = '/styles.css?v=' + new Date().getTime();
+        document.head.appendChild(link);
+        
+        // Load home.js with cache busting
+        var script = document.createElement('script');
+        script.src = '/home.js?v=' + new Date().getTime();
+        document.head.appendChild(script);
+    </script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🎫 Helpdesk IT System</h1>
+            <p class="subtitle">Layanan Bantuan Teknologi Informasi</p>
+        </header>
+
+        <!-- Auth Bar -->
+        <div class="auth-section">
+            <div class="auth-status" id="authStatus">
+                <span class="status-indicator offline"></span>
+                <span>Not Authenticated </span>
+            </div>
+            <button class="btn btn-primary" onclick="showLoginModal()">Login Admin</button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="intro-section">
+                <h2>Selamat Datang di Helpdesk IT</h2>
+                <p>Kami siap membantu menyelesaikan permasalahan IT Anda. Pilih jenis layanan di bawah ini:</p>
+            </div>
+
+            <!-- Service Cards -->
+            <div class="service-cards">
+                <!-- Tiket Perbaikan -->
+                <div class="service-card">
+                    <div class="card-icon">🔧</div>
+                    <h3>Tiket Perbaikan</h3>
+                    <p>Laporkan masalah IT seperti kerusakan hardware, software error, atau gangguan jaringan</p>
+                    <button class="btn btn-primary" onclick="showTicketModal('repair')">Buat Tiket Perbaikan</button>
+                </div>
+
+                <!-- Tiket Permintaan Barang -->
+                <div class="service-card">
+                    <div class="card-icon">📦</div>
+                    <h3>Tiket Permintaan</h3>
+                    <p>Ajukan permintaan barang IT seperti laptop, mouse, keyboard, atau peralatan lainnya</p>
+                    <button class="btn btn-primary" onclick="showTicketModal('request')">Buat Permintaan Barang</button>
+                </div>
+
+                <!-- Cek Status -->
+                <div class="service-card">
+                    <div class="card-icon">🔍</div>
+                    <h3>Cek Status Tiket</h3>
+                    <p>Periksa status dan progress dari tiket yang sudah Anda buat</p>
+                    <button class="btn btn-secondary" onclick="showCheckStatusModal()">Cek Status</button>
+                </div>
+            </div>
+
+            <!-- Info Section -->
+            <div class="info-section">
+                <h3>⏱️ Waktu Respon</h3>
+                <div class="response-time">
+                    <div class="time-item">
+                        <span class="priority urgent">Urgent</span>
+                        <span>1 Jam</span>
+                    </div>
+                    <div class="time-item">
+                        <span class="priority high">High</span>
+                        <span>2 - 3 Jam</span>
+                    </div>
+                    <div class="time-item">
+                        <span class="priority medium">Medium</span>
+                        <span>4 - 6 Jam</span>
+                    </div>
+                    <div class="time-item">
+                        <span class="priority low">Low</span>
+                        <span>8 - 12 Jam</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ticket List Section -->
+            <div class="ticket-list-section">
+                <div class="section-header">
+                    <h3>📋 Daftar Tiket Terbaru</h3>
+                    <div class="search-box">
+                        <input type="text" id="searchTicket" placeholder="Cari tiket..." onkeyup="applyFilters()">
+                        <button class="btn btn-secondary btn-sm" onclick="loadTickets()">🔄 Refresh</button>
+                    </div>
+                </div>
+
+                <!-- Filter Bar -->
+                <div class="filter-bar">
+                    <!-- Filter Kategori -->
+                    <div class="filter-group">
+                        <span class="filter-label">Kategori:</span>
+                        <div class="filter-tabs" id="categoryFilter">
+                            <button class="filter-tab active" data-category="all" onclick="setFilter('category','all',this)">Semua</button>
+                            <button class="filter-tab" data-category="Perbaikan" onclick="setFilter('category','Perbaikan',this)">🔧 Perbaikan</button>
+                            <button class="filter-tab" data-category="Permintaan Barang" onclick="setFilter('category','Permintaan Barang',this)">📦 Permintaan Barang</button>
+                        </div>
+                    </div>
+                    <!-- Filter Status -->
+                    <div class="filter-group">
+                        <span class="filter-label">Status:</span>
+                        <div class="filter-tabs" id="statusFilter">
+                            <button class="filter-tab active" data-status="all" onclick="setFilter('status','all',this)">Semua</button>
+                            <button class="filter-tab" data-status="open" onclick="setFilter('status','open',this)">Terbuka</button>
+                            <button class="filter-tab" data-status="in_progress" onclick="setFilter('status','in_progress',this)">Ditangani</button>
+                            <button class="filter-tab" data-status="pending" onclick="setFilter('status','pending',this)">Tertunda</button>
+                            <button class="filter-tab" data-status="resolved" onclick="setFilter('status','resolved',this)">Selesai</button>
+                            <button class="filter-tab" data-status="closed" onclick="setFilter('status','closed',this)">Ditutup</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ticket Count Info -->
+                <div id="ticketCountInfo" class="ticket-count-info" style="display:none;">
+                    <span id="ticketCountText"></span>
+                </div>
+                
+                <div id="ticketListContainer" class="ticket-list">
+                    <p class="loading-text">Memuat tiket...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="homepage-footer">
+        <p style="margin: 0; font-size: 14px;">
+            &copy; <span id="currentYear"></span> Helpdesk IT System. All Rights Reserved.
+        </p>
+    </footer>
+
+    <!-- Modal: Tiket Perbaikan -->
+    <div id="repairTicketModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeTicketModal('repairTicketModal')">&times;</span>
+            <h2>🔧 Buat Tiket Perbaikan</h2>
+            <p class="modal-subtitle">Laporkan masalah IT Anda dan kami akan segera menanganinya</p>
+            
+            <form id="repairTicketForm" onsubmit="handleSubmitTicket(event, 'repair')">
+                <div class="form-group">
+                    <label>Judul Masalah *</label>
+                    <input type="text" name="title" placeholder="Contoh: Printer tidak bisa print" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Deskripsi Masalah *</label>
+                    <textarea name="description" rows="4" placeholder="Jelaskan masalah secara detail..." required></textarea>
+                    <small>Minimal 10 karakter</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Tingkat Prioritas</label>
+                    <select name="priority">
+                        <option value="low">Low - Tidak mengganggu pekerjaan</option>
+                        <option value="medium" selected>Medium - Mengganggu sebagian pekerjaan</option>
+                        <option value="high">High - Menghambat pekerjaan</option>
+                        <option value="urgent">Urgent - Sangat mendesak!</option>
+                    </select>
+                </div>
+
+                <div class="form-divider">
+                    <h4>Informasi Pelapor</h4>
+                </div>
+
+                <div class="form-group">
+                    <label>Nama Lengkap *</label>
+                    <input type="text" name="reporter_name" placeholder="Nama Anda" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" name="reporter_email" placeholder="email@company.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label>No. Telepon</label>
+                    <input type="tel" name="reporter_phone" placeholder="08xxxxxxxxxx">
+                </div>
+
+                <div class="form-group">
+                    <label>Departemen</label>
+                    <input type="text" name="department" placeholder="Contoh: Finance, HR, IT">
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeTicketModal('repairTicketModal')">Batal</button>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="btn-text">Kirim Tiket</span>
+                        <span class="btn-loading" style="display:none;">Mengirim...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Permintaan Barang -->
+    <div id="requestTicketModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeTicketModal('requestTicketModal')">&times;</span>
+            <h2>📦 Permintaan Barang IT</h2>
+            <p class="modal-subtitle">Ajukan permintaan barang atau peralatan IT</p>
+            
+            <form id="requestTicketForm" onsubmit="handleSubmitTicket(event, 'request')">
+                <div class="form-group">
+                    <label>Nama Barang yang Diminta *</label>
+                    <input type="text" name="title" placeholder="Contoh: Laptop untuk staff baru" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Detail Permintaan *</label>
+                    <textarea name="description" rows="4" placeholder="Jelaskan spesifikasi atau detail barang yang diminta..." required></textarea>
+                    <small>Sebutkan spesifikasi, jumlah, dan alasan permintaan</small>
+                </div>
+
+                <div class="form-group">
+                    <label>Tingkat Prioritas</label>
+                    <select name="priority">
+                        <option value="low">Low - Tidak mendesak</option>
+                        <option value="medium" selected>Medium - Perlu segera</option>
+                        <option value="high">High - Sangat diperlukan</option>
+                        <option value="urgent">Urgent - Segera dibutuhkan!</option>
+                    </select>
+                </div>
+
+                <div class="form-divider">
+                    <h4>Informasi Pemohon</h4>
+                </div>
+
+                <div class="form-group">
+                    <label>Nama Lengkap *</label>
+                    <input type="text" name="reporter_name" placeholder="Nama Anda" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" name="reporter_email" placeholder="email@company.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label>No. Telepon</label>
+                    <input type="tel" name="reporter_phone" placeholder="08xxxxxxxxxx">
+                </div>
+
+                <div class="form-group">
+                    <label>Departemen</label>
+                    <input type="text" name="department" placeholder="Contoh: Finance, HR, IT">
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeTicketModal('requestTicketModal')">Batal</button>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="btn-text">Kirim Permintaan</span>
+                        <span class="btn-loading" style="display:none;">Mengirim...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Cek Status -->
+    <div id="checkStatusModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('checkStatusModal')">&times;</span>
+            <h2>🔍 Cek Status Tiket</h2>
+            <p class="modal-subtitle">Masukkan nomor tiket untuk melihat status</p>
+            
+            <form id="checkStatusForm" onsubmit="handleCheckStatus(event)">
+                <div class="form-group">
+                    <label>Nomor Tiket</label>
+                    <input type="text" name="ticket_number" id="ticketNumberInput" placeholder="TKT-INC-20260721-001" required>
+                    <small>Format: <strong>TKT-INC-YYYYMMDD-NNN</strong> (Perbaikan) &nbsp;|&nbsp; <strong>TKT-REQ-YYYYMMDD-NNN</strong> (Permintaan Barang)</small>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('checkStatusModal')">Batal</button>
+                    <button type="button" class="btn btn-outline" id="clearStatusBtn" onclick="clearCheckStatus()" style="display:none;">🗑️ Clear</button>
+                    <button type="submit" class="btn btn-primary">🔍 Cek Status</button>
+                </div>
+            </form>
+
+            <div id="ticketStatusResult" style="display:none; margin-top: 20px;">
+                <!-- Result will be shown here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Success -->
+    <div id="successModal" class="modal">
+        <div class="modal-content success-modal">
+            <div class="success-icon">✓</div>
+            <h2>Tiket Berhasil Dibuat!</h2>
+            <p>Nomor Tiket Anda:</p>
+            <div class="ticket-number-display" id="successTicketNumber">TKT-XXXXXX-XXXX</div>
+            <p class="success-message">Simpan nomor tiket ini untuk cek status di kemudian hari</p>
+            <button class="btn btn-primary" onclick="closeModal('successModal')">OK</button>
+        </div>
+    </div>
+
+    <!-- Modal: Login Staff -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('loginModal')">&times;</span>
+            <h2>🔐 Login </h2>
+            <p class="modal-subtitle">Untuk Admin dan IT Team</p>
+            
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="loginUsername" placeholder="username" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Password</label>
+                    <div style="position: relative;">
+                        <input type="password" id="loginPassword" placeholder="password" required style="padding-right: 45px;">
+                        <button type="button" 
+                                onclick="togglePasswordVisibility()" 
+                                style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 5px;"
+                                title="Show/Hide Password">
+                            <span id="togglePasswordIcon">👁️</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('loginModal')">Batal</button>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Set current year
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+    </script>
+
+</body>
+</html>

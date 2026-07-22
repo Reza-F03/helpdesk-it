@@ -1,0 +1,43 @@
+# Render Blueprint untuk Helpdesk IT System
+# File ini otomatis mengkonfigurasi deployment di Render
+
+services:
+  # Web Service (Backend + Frontend)
+  - type: web
+    name: helpdesk-it-system
+    runtime: node
+    region: singapore
+    plan: free  # Ubah ke 'starter' untuk production tanpa sleep
+    branch: main
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    
+    envVars:
+      # Node Environment
+      - key: NODE_ENV
+        value: production
+      
+      - key: PORT
+        value: 3000
+      
+      # Supabase Configuration (isi manual di Render Dashboard)
+      - key: SUPABASE_URL
+        sync: false
+      
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      
+      # JWT Secret (isi manual dengan string random 32+ karakter)
+      - key: JWT_SECRET
+        generateValue: true  # Render akan generate otomatis
+      
+      # Frontend URL (akan terisi otomatis setelah deploy)
+      - key: FRONTEND_URL
+        value: https://helpdesk-it-system.onrender.com
+
+    # Auto-deploy on push
+    autoDeploy: true
