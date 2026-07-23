@@ -48,6 +48,9 @@ body {
 .logo {
     padding: 20px;
     border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .logo h2 {
@@ -996,30 +999,345 @@ body {
     padding: 20px;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .sidebar {
-        width: 200px;
-    }
-    
-    .main-content {
-        margin-left: 200px;
-    }
-    
+/* ================================
+   Hamburger Button (hanya mobile)
+   ================================ */
+.hamburger-btn {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--dark);
+    padding: 4px 8px;
+    border-radius: 6px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+.hamburger-btn:hover {
+    background: var(--light);
+}
+
+/* Tombol X di dalam sidebar (hanya mobile) */
+.sidebar-close-btn {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: var(--secondary);
+    margin-left: auto;
+    padding: 4px 6px;
+    border-radius: 4px;
+    line-height: 1;
+}
+.sidebar-close-btn:hover { color: var(--danger); }
+
+/* Overlay gelap saat sidebar terbuka di mobile */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 99;
+}
+.sidebar-overlay.active { display: block; }
+
+/* ================================
+   Responsive — Tablet (≤ 992px)
+   ================================ */
+@media (max-width: 992px) {
     .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+    }
+
+    .filters {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .filters select,
+    .filters input {
+        font-size: 0.85rem;
+        padding: 7px 10px;
+    }
+
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .td-info-grid {
         grid-template-columns: 1fr;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 0;
     }
 }
 
-@media (max-width: 576px) {
+/* ================================
+   Responsive — Mobile (≤ 768px)
+   ================================ */
+@media (max-width: 768px) {
+
+    /* Tampilkan hamburger button */
+    .hamburger-btn { display: flex; align-items: center; }
+    .sidebar-close-btn { display: block; }
+
+    /* Sidebar geser dari kiri (off-canvas) */
     .sidebar {
-        width: 100%;
-        position: relative;
-        height: auto;
+        position: fixed;
+        left: -280px;
+        top: 0;
+        width: 260px;
+        height: 100vh;
+        z-index: 100;
+        transition: left 0.28s ease;
+        box-shadow: none;
     }
-    
+    .sidebar.open {
+        left: 0;
+        box-shadow: 4px 0 24px rgba(0,0,0,0.18);
+    }
+
+    /* Konten mulai dari kiri (tidak ada margin sidebar) */
     .main-content {
         margin-left: 0;
+        padding: 14px;
+        min-height: 100vh;
+    }
+
+    /* Header mobile */
+    .header {
+        padding: 12px 14px;
+        margin-bottom: 14px;
+    }
+    .header h1 {
+        font-size: 1.2rem;
+    }
+    .user-info {
+        gap: 6px;
+    }
+    .user-info span:first-child {
+        font-size: 0.82rem;
+        max-width: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Stats grid 1 kolom */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+    .stat-card {
+        padding: 14px;
+        gap: 10px;
+    }
+    .stat-icon-dot {
+        width: 38px;
+        height: 38px;
+    }
+    .stat-info h3 {
+        font-size: 1.5rem;
+    }
+    .stat-info p {
+        font-size: 0.78rem;
+    }
+
+    /* Section header */
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    .section-header h2 {
+        font-size: 1.1rem;
+    }
+
+    /* Filter bar tiket */
+    .filters {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        width: 100%;
+    }
+    .filters select,
+    .filters input[type="text"] {
+        width: 100%;
+        font-size: 0.82rem;
+        padding: 7px 8px;
+    }
+    /* Tombol download full width di baris sendiri */
+    .filters .btn {
+        grid-column: 1 / -1;
+    }
+
+    /* Filter tabs kategori */
+    .dash-filter-bar {
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px 12px;
+    }
+    .dash-filter-group {
+        width: 100%;
+    }
+    .dash-filter-tabs {
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+    .dash-filter-tab {
+        font-size: 0.78rem;
+        padding: 4px 10px;
+    }
+
+    /* Ticket item mobile — tumpuk vertikal */
+    .ticket-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 12px;
+    }
+    .ticket-item-info {
+        min-width: unset;
+        width: 100%;
+    }
+    .ticket-item-title {
+        white-space: normal;
+        font-size: 0.9rem;
+    }
+    .ticket-item-badges {
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+    .ticket-item-meta {
+        gap: 6px;
+        font-size: 0.76rem;
+    }
+    .ticket-item-actions {
+        width: 100%;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+    .btn-action {
+        font-size: 0.75rem;
+        padding: 5px 10px;
+    }
+
+    /* Log item */
+    .log-item {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+    }
+
+    /* User item */
+    .user-item {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+    }
+
+    /* Form row jadi 1 kolom */
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    /* Modal full screen di mobile */
+    .modal-content {
+        width: 96%;
+        padding: 18px;
+        max-height: 92vh;
+        border-radius: 10px;
+    }
+    .modal-large {
+        max-width: 100%;
+        width: 96%;
+    }
+
+    /* Modal detail tiket */
+    .td-info-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 12px;
+    }
+    .td-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .td-update-status {
+        flex-direction: column;
+        gap: 8px;
+    }
+    .td-select {
+        min-width: unset;
+        width: 100%;
+    }
+    .td-action-btns {
+        justify-content: flex-end;
+    }
+    .td-assign-wrap {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .td-select-sm { width: 100%; }
+    .btn-assign { width: 100%; justify-content: center; }
+
+    /* Profile card */
+    .profile-card {
+        padding: 16px;
+    }
+
+    /* Recent activity */
+    .recent-activity {
+        padding: 14px;
+    }
+    .activity-list {
+        max-height: 300px;
+    }
+
+    /* Tickets/users/logs list */
+    .tickets-list,
+    .users-list,
+    .logs-list {
+        padding: 12px;
+    }
+
+    /* Footer */
+    .dashboard-footer {
+        padding: 14px;
+        border-radius: 6px;
+        font-size: 12px;
+        margin-top: 24px;
+    }
+}
+
+/* ================================
+   Responsive — Small Mobile (≤ 400px)
+   ================================ */
+@media (max-width: 400px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    .header h1 {
+        font-size: 1rem;
+    }
+    .filters {
+        grid-template-columns: 1fr;
+    }
+    .badge {
+        font-size: 0.75rem;
+        padding: 3px 8px;
+    }
+    .user-info span:first-child {
+        display: none;
     }
 }
 

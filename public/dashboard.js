@@ -13,6 +13,20 @@ let allDashTickets = [];
 let activeCategoryFilter = 'all';
 let currentTicketData = null; // data tiket yang sedang dibuka di modal
 
+// ── Sidebar mobile ──────────────────────────────────────────────────
+function openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('sidebarOverlay').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebarOverlay').classList.remove('active');
+    document.body.style.overflow = '';
+}
+// Tutup sidebar saat tekan Escape
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSidebar(); });
+
 // Periksa autentikasi
 if (!authToken || !currentUser) {
     console.error('❌ Token atau user tidak ditemukan, redirect ke halaman utama');
@@ -77,6 +91,9 @@ function showSection(sectionName, event) {
         profile: 'Pengaturan Profil'
     };
     document.getElementById('pageTitle').textContent = titles[sectionName];
+
+    // Tutup sidebar di mobile setelah navigasi
+    if (window.innerWidth <= 768) closeSidebar();
 
     // Muat data section
     switch (sectionName) {
