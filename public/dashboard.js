@@ -519,6 +519,36 @@ async function showTicketDetail(ticketId) {
                     <div class="td-description">${ticket.description}</div>
                 </div>
 
+                <!-- Hasil Perbaikan / Permintaan (tampil jika status pending atau resolved) -->
+                ${(ticket.status === 'pending' || ticket.status === 'resolved' || ticket.status === 'closed') ? `
+                <div class="td-section" id="hasilPerbaikanSection">
+                    <div class="td-section-label" style="display:flex;align-items:center;justify-content:space-between;">
+                        <span>
+                            ${ticket.category === 'Permintaan Barang' ? '📦 Hasil Permintaan' : '🔧 Hasil Perbaikan'}
+                        </span>
+                        ${ticket.status !== 'closed' ? `
+                        <button class="btn-assign" id="btnSimpanHasil" onclick="saveHasilPerbaikan('${ticket.id}')"
+                            style="font-size:0.8rem;padding:4px 12px;">
+                            💾 Simpan
+                        </button>` : ''}
+                    </div>
+                    <textarea
+                        id="hasilPerbaikanInput"
+                        class="td-description"
+                        rows="4"
+                        ${ticket.status === 'closed' ? 'readonly' : ''}
+                        placeholder="${ticket.category === 'Permintaan Barang'
+                            ? 'Tuliskan hasil atau keterangan penyelesaian permintaan...'
+                            : 'Tuliskan hasil atau keterangan perbaikan yang telah dilakukan...'}"
+                        style="resize:vertical;min-height:90px;font-family:inherit;font-size:0.92rem;line-height:1.6;
+                               ${ticket.status === 'closed' ? 'background:#f8fafc;color:#475569;cursor:not-allowed;' : ''}"
+                    >${ticket.hasil_perbaikan || ''}</textarea>
+                    ${ticket.status === 'closed' ? `
+                    <small style="color:#94a3b8;font-size:0.78rem;">
+                        🔒 Tiket sudah ditutup, hasil perbaikan tidak dapat diubah.
+                    </small>` : ''}
+                </div>` : ''}
+
                 <!-- Divider -->
                 <hr class="td-divider">
 
@@ -600,136 +630,403 @@ async function saveAssignee(ticketId) {
     }
 }
 
+// Simpan hasil perbaikan / permintaan
+async function saveHasilPerbaikan(ticketId) {
+    const textarea = document.getElementById('hasilPerbaikanInput');
+    const btn      = document.getElementById('btnSimpanHasil');
+
+    if (!textarea) return;
+
+    const nilai = textarea.value.trim();
+    if (!nilai) {
+        textarea.focus();
+        textarea.style.border = '2px solid #ef4444';
+        textarea.placeholder  = '⚠️ Isi hasil perbaikan terlebih dahulu...';
+        setTimeout(() => {
+            textarea.style.border = '';
+            textarea.placeholder  = '';
+        }, 2500);
+        return;
+    }
+
+    // Simpan nilai sebelum-request untuk fallback
+    const nilaiAwal = currentTicketData?.hasil_perbaikan || '';
+
+    btn.disabled    = true;
+    btn.textContent = '...';
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/tickets/${ticketId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ hasil_perbaikan: nilai })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            // Perbarui data global
+            if (currentTicketData) currentTicketData.hasil_perbaikan = nilai;
+
+            // Feedback sukses
+            btn.textContent       = '✔ Tersimpan';
+            btn.style.background  = '#065f46';
+            textarea.style.border = '2px solid #10b981';
+
+            setTimeout(() => {
+                btn.disabled       = false;
+                btn.textContent    = '💾 Simpan';
+                btn.style.background = '';
+                textarea.style.border = '';
+            }, 2500);
+        } else {
+            alert(data.message || 'Gagal menyimpan hasil perbaikan');
+            btn.disabled    = false;
+            btn.textContent = '💾 Simpan';
+        }
+    } catch (error) {
+        console.error('Gagal menyimpan hasil perbaikan:', error);
+        alert('Terjadi kesalahan saat menyimpan');
+        btn.disabled    = false;
+        btn.textContent = '💾 Simpan';
+    }
+}
+
 // Print tiket (hanya untuk status selesai/ditutup)
 function printTicketDetail() {
-    const source = document.getElementById('ticketDetail');
-    const clone  = source.cloneNode(true);
+    const source   = document.getElementById('ticketDetail');
+    const ticket   = currentTicketData || {};
 
-    // Ambil nama staff dari dropdown sebelum clone diproses
+    // ── Ambil nama staff dari dropdown ───────────────────────────────
     const assigneeEl  = source.querySelector('#assigneeSelect');
     const assigneeOpt = assigneeEl ? assigneeEl.options[assigneeEl.selectedIndex] : null;
     const namaStaff   = (assigneeOpt && assigneeOpt.value)
         ? assigneeOpt.text.split('—')[0].trim()
-        : '................................';
+        : '&nbsp;';
 
-    // Ganti dropdown assign dengan teks nama petugas
-    const assignWrap = clone.querySelector('.td-assign-wrap');
-    if (assignWrap) {
-        const select      = assignWrap.querySelector('select');
-        const selectedOpt = select ? select.options[select.selectedIndex] : null;
-        const namaText    = selectedOpt && selectedOpt.value
-            ? selectedOpt.text
-            : '<em style="color:#94a3b8;">Belum ditugaskan</em>';
-        const span = document.createElement('span');
-        span.style.cssText = 'font-size:0.88rem;font-weight:600;color:#1e293b;';
-        span.innerHTML     = namaText;
-        assignWrap.replaceWith(span);
-    }
+    // ── Helper format ─────────────────────────────────────────────────
+    const fmt = v => v || '<span style="color:#94a3b8;font-style:italic;">-</span>';
 
-    // Hapus area aksi
-    clone.querySelectorAll('.td-actions').forEach(el => el.remove());
-    const content = clone.innerHTML;
+    const statusLabel = {
+        open:'Terbuka', in_progress:'Sedang Ditangani',
+        pending:'Tertunda', resolved:'Selesai', closed:'Ditutup'
+    }[ticket.status] || ticket.status || '-';
 
-    // ── Data untuk tanda tangan ──────────────────────────────────────
-    const ticket   = currentTicketData || {};
-    const kategori = (ticket.category || '').trim();
-    const namaUser = ticket.reporter_name || ticket.creator?.full_name || '................................';
+    const priorityLabel = {
+        low:'Rendah', medium:'Sedang', high:'Tinggi', urgent:'Mendesak'
+    }[ticket.priority] || ticket.priority || '-';
 
-    const ttdBox = (role, nama) => `
-        <div class="ttd-box">
-            <div class="ttd-role">${role}</div>
-            <div class="ttd-space"></div>
-            <div class="ttd-line"></div>
-            <div class="ttd-name">${nama}</div>
-        </div>`;
+    const statusColor = {
+        open:'#dc2626', in_progress:'#d97706',
+        pending:'#ca8a04', resolved:'#16a34a', closed:'#475569'
+    }[ticket.status] || '#475569';
 
-    const ttdBlock = kategori === 'Permintaan Barang'
-        ? `<div class="ttd-grid ttd-3col">
-               ${ttdBox('User / Pemohon', namaUser)}
-               ${ttdBox('Staff IT', namaStaff)}
-               ${ttdBox('Manager IT', '................................')}
-           </div>`
-        : `<div class="ttd-grid ttd-2col">
-               ${ttdBox('User / Pemohon', namaUser)}
-               ${ttdBox('Staff IT', namaStaff)}
-           </div>`;
+    const priorityColor = {
+        low:'#0369a1', medium:'#d97706', high:'#ea580c', urgent:'#dc2626'
+    }[ticket.priority] || '#475569';
 
-    const printWindow = window.open('', '_blank', 'width=820,height=700');
+    const formatTgl = d => d ? new Date(d).toLocaleString('id-ID', {
+        day:'2-digit', month:'long', year:'numeric',
+        hour:'2-digit', minute:'2-digit'
+    }) : '-';
+
+    // ── Data pelapor & penugasan ──────────────────────────────────────
+    const namaUser   = fmt(ticket.reporter_name);
+    const emailUser  = fmt(ticket.reporter_email);
+    const phoneUser  = fmt(ticket.reporter_phone);
+    const dept       = fmt(ticket.department);
+    const kategori   = (ticket.category || '').trim();
+    const tglBuat    = formatTgl(ticket.created_at);
+    const tglUpdate  = formatTgl(ticket.updated_at);
+
+    // ── Ambil hasil perbaikan dari textarea (jika ada perubahan live) atau dari data
+    const hasilTextarea = document.getElementById('hasilPerbaikanInput');
+    const hasilPerbaikan = hasilTextarea
+        ? (hasilTextarea.value.trim() || ticket.hasil_perbaikan || '')
+        : (ticket.hasil_perbaikan || '');
+    const hasilLabel = kategori === 'Permintaan Barang' ? 'Hasil Permintaan' : 'Hasil Perbaikan';
+
+    // ── Pengesahan / tanda tangan ─────────────────────────────────────
+    const ttdCell = (jabatan, nama) => `
+        <td style="width:${kategori==='Permintaan Barang'?'33%':'50%'};text-align:center;padding:12px 8px;vertical-align:bottom;">
+            <div style="font-size:11px;font-weight:700;color:#1e293b;margin-bottom:6px;">${jabatan}</div>
+            <div style="height:70px;"></div>
+            <div style="border-top:1.5px solid #334155;margin:0 auto;width:80%;"></div>
+            <div style="font-size:11px;color:#334155;font-weight:600;margin-top:6px;min-height:18px;">${nama}</div>
+        </td>`;
+
+    const ttdRow = kategori === 'Permintaan Barang'
+        ? ttdCell('User / Pemohon', namaUser) +
+          ttdCell('Staff IT', namaStaff) +
+          ttdCell('Manager IT', '&nbsp;')
+        : ttdCell('User / Pemohon', namaUser) +
+          ttdCell('Staff IT', namaStaff);
+
+    // ── Deskripsi ─────────────────────────────────────────────────────
+    const deskripsi = (ticket.description || '-').replace(/\n/g, '<br>');
+
+    const printWindow = window.open('', '_blank', 'width=860,height=760');
     printWindow.document.write(`<!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<title>Cetak Tiket \u2014 ${ticket.ticket_number || ''}</title>
+<title>Cetak Tiket — ${ticket.ticket_number || ''}</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1e293b;padding:32px;font-size:13px;line-height:1.6}
-.print-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #2563eb;padding-bottom:14px;margin-bottom:20px}
-.print-header h1{font-size:1.3rem;color:#2563eb}
-.print-date{font-size:0.82rem;color:#64748b;text-align:right}
-.ticket-detail-wrap{display:flex;flex-direction:column;gap:14px}
-.td-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px}
-.td-number{font-family:'Courier New',monospace;font-size:.9rem;font-weight:700;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;padding:3px 10px;border-radius:5px}
-.td-badges{display:flex;gap:5px;flex-wrap:wrap}
-.status-badge,.priority-badge,.category-badge{padding:2px 9px;border-radius:12px;font-size:.75rem;font-weight:700;text-transform:uppercase}
-.status-open{background:#fee2e2;color:#991b1b}
-.status-in_progress{background:#fef3c7;color:#92400e}
-.status-pending{background:#fef9c3;color:#854d0e}
-.status-resolved{background:#d1fae5;color:#065f46}
-.status-closed{background:#e5e7eb;color:#374151}
-.priority-badge-low{background:#e0f2fe;color:#075985}
-.priority-badge-medium{background:#fef3c7;color:#92400e}
-.priority-badge-high{background:#ffedd5;color:#c2410c}
-.priority-badge-urgent{background:#fee2e2;color:#b91c1c}
-.category-badge{background:#f1f5f9;color:#475569}
-.td-title{font-size:1.15rem;font-weight:700;color:#0f172a}
-.td-title-box{background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #64748b;border-radius:6px;padding:10px 14px;font-size:1rem;font-weight:700;color:#0f172a;line-height:1.5}
-.td-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px}
-.td-info-item{display:flex;flex-direction:column;gap:4px}
-.td-info-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b}
-.td-info-value{font-size:.88rem;color:#1e293b;font-weight:500}
-.td-info-value small{font-size:.78rem;color:#64748b;font-weight:400;display:block}
-.td-info-value em{color:#94a3b8;font-style:italic;font-weight:400}
-.td-section{display:flex;flex-direction:column;gap:5px}
-.td-section-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b}
-.td-description{background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #2563eb;border-radius:6px;padding:10px 14px;font-size:.88rem;white-space:pre-wrap}
-.td-divider{border:none;border-top:1px solid #e2e8f0}
-.td-actions,select,button,input{display:none!important}
-/* Tanda Tangan */
-.ttd-section{margin-top:28px;padding-top:16px;border-top:2px solid #e2e8f0}
-.ttd-section-title{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;margin-bottom:20px}
-.ttd-grid{display:grid;gap:32px}
-.ttd-2col{grid-template-columns:1fr 1fr}
-.ttd-3col{grid-template-columns:1fr 1fr 1fr}
-.ttd-box{display:flex;flex-direction:column;align-items:center;text-align:center}
-.ttd-role{font-size:.85rem;font-weight:700;color:#1e293b;margin-bottom:4px}
-.ttd-space{height:72px}
-.ttd-line{width:75%;border-top:1.5px solid #334155;margin-bottom:6px}
-.ttd-name{font-size:.82rem;color:#334155;font-weight:500;min-height:20px}
-/* Footer */
-.print-footer{margin-top:20px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:.78rem;color:#94a3b8;text-align:center}
-@media print{body{padding:20px}}
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 12px;
+    color: #1e293b;
+    background: #fff;
+    padding: 32px 36px;
+    line-height: 1.5;
+  }
+
+  /* ── Header ── */
+  .header-wrap {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 3px solid #2563eb;
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+  }
+  .header-logo { font-size: 1.3rem; font-weight: 800; color: #2563eb; }
+  .header-sub  { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .header-right { text-align: right; font-size: 11px; color: #64748b; }
+  .header-right strong { display: block; color: #1e293b; font-size: 12px; margin-top: 2px; }
+
+  /* ── Section Title ── */
+  .sec-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #fff;
+    background: #2563eb;
+    padding: 5px 10px;
+    margin: 0 0 0 0;
+  }
+
+  /* ── Tabel Info ── */
+  .info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14px;
+  }
+  .info-table th, .info-table td {
+    border: 1px solid #cbd5e1;
+    padding: 7px 10px;
+    vertical-align: top;
+    text-align: left;
+    font-size: 12px;
+  }
+  .info-table th {
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 700;
+    width: 28%;
+    white-space: nowrap;
+  }
+  .info-table td { color: #1e293b; }
+  .info-table tr:nth-child(even) td { background: #f8fafc; }
+
+  /* ── Nomor Tiket ── */
+  .ticket-number {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: 800;
+    color: #2563eb;
+    background: #eff6ff;
+    border: 1.5px solid #bfdbfe;
+    padding: 4px 14px;
+    border-radius: 5px;
+    display: inline-block;
+    letter-spacing: 1px;
+  }
+
+  /* ── Badge Status & Prioritas ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  /* ── Deskripsi ── */
+  .desc-box {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14px;
+  }
+  .desc-box td {
+    border: 1px solid #cbd5e1;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: #1e293b;
+    line-height: 1.7;
+    background: #fafcff;
+    border-left: 4px solid #2563eb;
+  }
+
+  /* ── Pengesahan ── */
+  .ttd-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #fff;
+    background: #334155;
+    padding: 5px 10px;
+    margin-bottom: 0;
+  }
+  .ttd-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #cbd5e1;
+    margin-bottom: 14px;
+  }
+  .ttd-table td {
+    border: 1px solid #cbd5e1;
+    padding: 10px 8px 12px;
+  }
+
+  /* ── Footer ── */
+  .print-footer {
+    margin-top: 18px;
+    padding-top: 10px;
+    border-top: 1px solid #e2e8f0;
+    font-size: 10px;
+    color: #94a3b8;
+    text-align: center;
+  }
+
+  @media print {
+    body { padding: 20px 24px; }
+    @page { margin: 1.5cm; }
+  }
 </style>
 </head>
 <body>
-<div class="print-header">
-    <div>
-        <h1>&#127243; Helpdesk IT System</h1>
-        <div style="font-size:.82rem;color:#64748b;margin-top:3px;">Laporan Tiket</div>
-    </div>
-    <div class="print-date">Dicetak pada:<br><strong>${new Date().toLocaleString('id-ID')}</strong></div>
+
+<!-- ═══════════════════════ HEADER ═══════════════════════ -->
+<div class="header-wrap">
+  <div>
+    <div class="header-logo">🎫 Helpdesk IT System</div>
+    <div class="header-sub">Laporan / Cetak Tiket</div>
+  </div>
+  <div class="header-right">
+    Dicetak pada:<br>
+    <strong>${new Date().toLocaleString('id-ID', {day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}</strong>
+  </div>
 </div>
 
-${content}
+<!-- ═══════════════════════ INFO TIKET ═══════════════════════ -->
+<div class="sec-title">Informasi Tiket</div>
+<table class="info-table">
+  <tr>
+    <th>Nomor Tiket</th>
+    <td><span class="ticket-number">${ticket.ticket_number || '-'}</span></td>
+    <th>Kategori</th>
+    <td>${fmt(ticket.category)}</td>
+  </tr>
+  <tr>
+    <th>Status</th>
+    <td><span class="badge" style="background:${statusColor}22;color:${statusColor};">${statusLabel}</span></td>
+    <th>Prioritas</th>
+    <td><span class="badge" style="background:${priorityColor}22;color:${priorityColor};">${priorityLabel}</span></td>
+  </tr>
+  <tr>
+    <th>Tanggal Dibuat</th>
+    <td>${tglBuat}</td>
+    <th>Terakhir Diperbarui</th>
+    <td>${tglUpdate}</td>
+  </tr>
+  <tr>
+    <th>Ditugaskan Kepada</th>
+    <td colspan="3">${namaStaff !== '&nbsp;' ? namaStaff : '<span style="color:#94a3b8;font-style:italic;">Belum ditugaskan</span>'}</td>
+  </tr>
+</table>
 
-<div class="ttd-section">
-    <div class="ttd-section-title">Pengesahan</div>
-    ${ttdBlock}
-</div>
+<!-- ═══════════════════════ JUDUL TIKET ═══════════════════════ -->
+<div class="sec-title">Judul</div>
+<table class="desc-box" style="margin-bottom:14px;">
+  <tr>
+    <td style="border-left:4px solid #64748b;background:#f8fafc;font-weight:700;font-size:13px;">
+      ${fmt(ticket.title)}
+    </td>
+  </tr>
+</table>
 
+<!-- ═══════════════════════ DESKRIPSI ═══════════════════════ -->
+<div class="sec-title">Deskripsi Masalah / Permintaan</div>
+<table class="desc-box">
+  <tr><td>${deskripsi}</td></tr>
+</table>
+
+<!-- ═══════════════════════ HASIL PERBAIKAN ═══════════════════════ -->
+${hasilPerbaikan ? `
+<div class="sec-title" style="background:#065f46;">${hasilLabel}</div>
+<table class="desc-box" style="margin-bottom:14px;">
+  <tr>
+    <td style="border-left:4px solid #065f46;background:#f0fdf4;line-height:1.7;">
+      ${hasilPerbaikan.replace(/\n/g, '<br>')}
+    </td>
+  </tr>
+</table>
+` : `
+<div class="sec-title" style="background:#94a3b8;">${hasilLabel}</div>
+<table class="desc-box" style="margin-bottom:14px;">
+  <tr>
+    <td style="border-left:4px solid #94a3b8;background:#f8fafc;color:#94a3b8;font-style:italic;">
+      Belum diisi
+    </td>
+  </tr>
+</table>
+`}
+
+<!-- ═══════════════════════ DATA PELAPOR ═══════════════════════ -->
+<div class="sec-title">Data Pelapor</div>
+<table class="info-table">
+  <tr>
+    <th>Nama Pelapor</th>
+    <td>${namaUser}</td>
+    <th>Departemen</th>
+    <td>${dept}</td>
+  </tr>
+  <tr>
+    <th>Email</th>
+    <td>${emailUser}</td>
+    <th>Telepon</th>
+    <td>${phoneUser}</td>
+  </tr>
+</table>
+
+<!-- ═══════════════════════ PENGESAHAN ═══════════════════════ -->
+<div class="ttd-title">Pengesahan</div>
+<table class="ttd-table">
+  <tr>${ttdRow}</tr>
+</table>
+
+<!-- ═══════════════════════ FOOTER ═══════════════════════ -->
 <div class="print-footer">
-    Dokumen ini dicetak dari Sistem Helpdesk IT &mdash; ${new Date().toLocaleDateString('id-ID',{year:'numeric',month:'long',day:'numeric'})}
+  Dokumen ini dicetak dari Sistem Helpdesk IT &mdash;
+  ${new Date().toLocaleDateString('id-ID', {year:'numeric', month:'long', day:'numeric'})} &mdash;
+  Nomor Tiket: ${ticket.ticket_number || '-'}
 </div>
-<script>window.onload=function(){window.print();window.onafterprint=function(){window.close();};};<\/script>
+
+<script>
+  window.onload = function () {
+    window.print();
+    window.onafterprint = function () { window.close(); };
+  };
+<\/script>
 </body>
 </html>`);
     printWindow.document.close();

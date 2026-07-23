@@ -263,6 +263,7 @@ async function handleCheckStatus(event) {
                         <p><strong>Pelapor:</strong> ${ticket.reporter_name}</p>
                         <p><strong>Dibuat:</strong> ${formatDate(ticket.created_at)}</p>
                         ${assigneeInfo(ticket)}
+                        ${hasilPerbaikanInfo(ticket)}
                     </div>
                 </div>
             `;
@@ -626,6 +627,7 @@ async function handleCheckStatusByNumber(ticketNumber) {
                         ${ticket.department ? `<p><strong>Departemen:</strong> ${ticket.department}</p>` : ''}
                         <p><strong>Dibuat:</strong> ${formatDate(ticket.created_at)}</p>
                         ${assigneeInfo(ticket)}
+                        ${hasilPerbaikanInfo(ticket)}
                     </div>
                 </div>
             `;
@@ -652,6 +654,43 @@ function assigneeInfo(ticket) {
         return `<p><strong>Petugas:</strong> ${ticket.assignee?.full_name || 'Support Team'}</p>`;
     }
     return '';
+}
+
+function hasilPerbaikanInfo(ticket) {
+    // Hanya tampil jika status pending, resolved, atau closed DAN ada isinya
+    const showStatus = ['pending', 'resolved', 'closed'].includes(ticket.status);
+    if (!showStatus || !ticket.hasil_perbaikan) return '';
+
+    const label = ticket.category === 'Permintaan Barang'
+        ? '📦 Hasil Permintaan'
+        : '🔧 Hasil Perbaikan';
+
+    return `
+        <div style="
+            margin-top: 12px;
+            padding: 12px 14px;
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-left: 4px solid #16a34a;
+            border-radius: 8px;
+        ">
+            <p style="
+                font-size: 0.78rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                color: #16a34a;
+                margin-bottom: 6px;
+            ">${label}</p>
+            <p style="
+                font-size: 0.92rem;
+                color: #166534;
+                line-height: 1.6;
+                white-space: pre-wrap;
+                margin: 0;
+            ">${ticket.hasil_perbaikan}</p>
+        </div>
+    `;
 }
 function getStatusLabel(status) {
     const labels = {

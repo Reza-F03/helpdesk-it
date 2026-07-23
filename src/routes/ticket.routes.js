@@ -230,6 +230,11 @@ router.put(
       .optional()
       .isIn(['open', 'in_progress', 'pending', 'resolved', 'closed'])
       .withMessage('Invalid status'),
+    body('hasil_perbaikan')
+      .optional({ nullable: true })
+      .trim()
+      .isLength({ max: 5000 })
+      .withMessage('Hasil perbaikan maksimal 5000 karakter'),
     body('category')
       .optional()
       .trim()

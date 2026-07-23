@@ -205,7 +205,7 @@ const getTicketById = async (req, res) => {
 const updateTicket = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, priority, status, category, assigned_to } = req.body;
+    const { title, description, priority, status, category, assigned_to, hasil_perbaikan } = req.body;
     const userId = req.user.id;
     const userRole = req.user.role;
 
@@ -239,6 +239,7 @@ const updateTicket = async (req, res) => {
       if (description !== undefined) updateData.description = description;
       if (priority !== undefined) updateData.priority = priority;
       if (category !== undefined) updateData.category = category;
+      if (hasil_perbaikan !== undefined) updateData.hasil_perbaikan = hasil_perbaikan;
       
       // Handle status updates
       if (status !== undefined) {
@@ -275,7 +276,12 @@ const updateTicket = async (req, res) => {
 
     if (updateError) {
       console.error('Update ticket error:', updateError);
-      return errorResponse(res, 'Failed to update ticket', 500);
+      // Cek apakah error karena kolom tidak ada di database
+      const msg = updateError.message || '';
+      if (msg.includes('column') || msg.includes('hasil_perbaikan') || msg.includes('does not exist')) {
+        return errorResponse(res, 'Kolom hasil_perbaikan belum ada di database. Jalankan SQL migration terlebih dahulu.', 500);
+      }
+      return errorResponse(res, updateError.message || 'Failed to update ticket', 500);
     }
 
     // Auto-log activity for important changes
